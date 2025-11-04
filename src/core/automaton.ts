@@ -98,19 +98,32 @@ export class ProfanityFilter {
     }
 
     find(text: string): Match[] {
-        text = squashRepeats(text);
-
+        // Build normalized sequence while preserving original indices.
+        // We also implement repeat-squash (3+ identical normalized chars -> at most 2)
+        // on-the-fly to avoid shifting indices.
         const normalizedChars: string[] = [];
         const positions: number[] = [];
+
+        let prevNorm: string | null = null;
+        let runLen = 0;
 
         for (let i = 0; i < text.length; i++) {
             const ch = text[i];
             if (typeof ch !== "string") continue;
             const n = normalizeChar(ch);
-            if (n) {
-                normalizedChars.push(n);
-                positions.push(i);
+            if (!n) continue;
+
+            if (n === prevNorm) {
+                runLen += 1;
+                // Skip if more than 2 repeats
+                if (runLen > 2) continue;
+            } else {
+                prevNorm = n;
+                runLen = 1;
             }
+
+            normalizedChars.push(n);
+            positions.push(i);
         }
 
         const blacklistMatches = this.runAutomaton(this.root, text, normalizedChars, positions);
