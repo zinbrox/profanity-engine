@@ -5,13 +5,20 @@ import type { Match } from "./types";
 export class ProfanityFilter {
     private readonly root: Node = new Node();
     private readonly whiteRoot: Node = new Node();
+    private readonly hasWhitelist: boolean;
 
     constructor(words: string[], whitelist: string[] = []) {
-        this.buildTrie(this.root, words);
-        this.buildTrie(this.whiteRoot, whitelist);
+        this.hasWhitelist = whitelist.length > 0;
+
+        this.buildTrie(this.root, words.map(w => w.toLowerCase()));
+        if (this.hasWhitelist) {
+            this.buildTrie(this.whiteRoot, whitelist.map(w => w.toLowerCase()));
+        }
 
         this.buildFailureLinks(this.root);
-        this.buildFailureLinks(this.whiteRoot);
+        if (this.hasWhitelist) {
+            this.buildFailureLinks(this.whiteRoot);
+        }
     }
 
     private buildTrie(root: Node, words: string[]) {
@@ -22,7 +29,9 @@ export class ProfanityFilter {
             for (const ch of w) {
                 node = node.children[ch] ??= new Node();
             }
-            node.output.push(w);
+            if (!node.output.includes(w)) {
+                node.output.push(w);
+            }
         }
     }
 
@@ -43,7 +52,11 @@ export class ProfanityFilter {
                 }
 
                 childNode.fail = failNode ? (failNode.children[char] ?? null) : root;
-                childNode.output.push(...(childNode.fail?.output ?? []));
+
+                if (childNode.fail && childNode.fail.output.length) {
+                    childNode.output = [...childNode.output, ...childNode.fail.output];
+                }
+
                 queue.push(childNode);
             }
         }
@@ -100,10 +113,12 @@ export class ProfanityFilter {
             }
         }
 
-        // Run both tries
         const blacklistMatches = this.runAutomaton(this.root, text, normalizedChars, positions);
-        const whitelistMatches = this.runAutomaton(this.whiteRoot, text, normalizedChars, positions);
+        if (!this.hasWhitelist || blacklistMatches.length === 0) {
+            return blacklistMatches;
+        }
 
+        const whitelistMatches = this.runAutomaton(this.whiteRoot, text, normalizedChars, positions);
         if (whitelistMatches.length === 0) {
             return blacklistMatches;
         }

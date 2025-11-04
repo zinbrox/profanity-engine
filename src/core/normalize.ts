@@ -82,15 +82,29 @@ export const ignoreChars = new Set([
     '\'', '"', ':', ';', '!', '?'
 ]);
 
+const isAlphaNum = (c: string): boolean => {
+    const code = c.charCodeAt(0);
+    // 0–9
+    if (code >= 48 && code <= 57) return true;
+    // a–z
+    if (code >= 97 && code <= 122) return true;
+    return false;
+};
+
 export function normalizeChar(ch: string): string | null {
     const lower = ch.toLowerCase();
 
+    // Homoglyph letter map
     if (unicodeMap[lower]) return unicodeMap[lower];
+    // Homoglyph digits map
     if (unicodeDigits[lower]) return unicodeDigits[lower];
 
-    if (/[a-z0-9]/.test(lower)) return lower;
+    if (lower.length === 1 && isAlphaNum(lower)) return lower;
+
+    // ignore noise characters entirely
     if (ignoreChars.has(ch)) return null;
 
+    // drop everything else (emoji etc)
     return null;
 }
 
