@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 // Initialize profanity filter with some words
-const filter = new ProfanityFilter(["badword", "verybad", "evil", "stupid"]);
+const filter = new ProfanityFilter(["badword", "verybad", "evil", "stupid", "ass", "fuck", "cunt"], ["scunthorpe"]);
 
 // POST /check
 // Body: { "text": "your text here" }

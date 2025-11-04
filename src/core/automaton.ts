@@ -1,40 +1,36 @@
 import { Node } from "./node";
-import { normalizeChar } from "./normalize";
+import { normalizeChar, squashRepeats } from "./normalize";
 import type { Match } from "./types";
 
 export class ProfanityFilter {
     private readonly root: Node = new Node();
+    private readonly whiteRoot: Node = new Node();
 
-    constructor(words: string[]) {
-        this.buildTrie(words);
-        this.buildFailureLinks();
+    constructor(words: string[], whitelist: string[] = []) {
+        this.buildTrie(this.root, words);
+        this.buildTrie(this.whiteRoot, whitelist);
+
+        this.buildFailureLinks(this.root);
+        this.buildFailureLinks(this.whiteRoot);
     }
 
-    /**
-     * Build the trie from the list of words
-     * @param words Array of words to build the trie from
-     */
-    private buildTrie(words: string[]): void {
+    private buildTrie(root: Node, words: string[]) {
         for (const word of words) {
-            let node = this.root;
+            let node = root;
             const w = word.toLowerCase();
 
             for (const ch of w) {
                 node = node.children[ch] ??= new Node();
             }
-
             node.output.push(w);
         }
     }
 
-    /**
-     * Build failure links for the Aho-Corasick automaton
-     */
-    private buildFailureLinks(): void {
+    private buildFailureLinks(root: Node) {
         const queue: Node[] = [];
 
-        for (const child of Object.values(this.root.children)) {
-            child.fail = this.root;
+        for (const child of Object.values(root.children)) {
+            child.fail = root;
             queue.push(child);
         }
 
@@ -46,49 +42,26 @@ export class ProfanityFilter {
                     failNode = failNode.fail;
                 }
 
-                childNode.fail = failNode ? (failNode.children[char] ?? null) : this.root;
+                childNode.fail = failNode ? (failNode.children[char] ?? null) : root;
                 childNode.output.push(...(childNode.fail?.output ?? []));
                 queue.push(childNode);
             }
         }
     }
 
-    /**
-     * Searches for matches of patterns within the given text using the automaton.
-     *
-     * @param text - The input string.
-     * @returns An array of `Match` objects, each representing a found pattern and its position in the text.
-     */
-    find(text: string): Match[] {
+    private runAutomaton(root: Node, text: string, normalizedChars: string[], positions: number[]): Match[] {
         const matches: Match[] = [];
-        const normalizedChars: string[] = [];
-        const positions: number[] = [];
-
-        // Normalize the input text and keep track of original positions
-        for (let i = 0; i < text.length; i++) {
-            const ch = text[i];
-            if (typeof ch === "string") {
-                const n = normalizeChar(ch);
-                if (n) {
-                    normalizedChars.push(n);
-                    positions.push(i);
-                }
-            }
-        }
-
-        let node: Node = this.root;
+        let node: Node = root;
 
         for (let i = 0; i < normalizedChars.length; i++) {
             const ch = normalizedChars[i]!;
-
-            // Walk failure links using a nullable cursor to satisfy strict types.
             let cursor: Node | null = node;
+
             while (cursor && !cursor.children[ch]) {
                 cursor = cursor.fail;
             }
 
-            // If we found a cursor with a transition, follow it; otherwise go to root.
-            node = (cursor && cursor.children[ch]) ? cursor.children[ch]! : this.root;
+            node = (cursor && cursor.children[ch]) ? cursor.children[ch]! : root;
 
             if (node.output.length > 0) {
                 for (const word of node.output) {
@@ -98,7 +71,7 @@ export class ProfanityFilter {
                     const start = positions[startIndex];
                     const end = positions[i];
 
-                    if (start === undefined || end === undefined) continue;
+                    if (start == null || end == null) continue;
 
                     matches.push({
                         word,
@@ -108,8 +81,36 @@ export class ProfanityFilter {
                 }
             }
         }
-
         return matches;
+    }
+
+    find(text: string): Match[] {
+        text = squashRepeats(text);
+
+        const normalizedChars: string[] = [];
+        const positions: number[] = [];
+
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (typeof ch !== "string") continue;
+            const n = normalizeChar(ch);
+            if (n) {
+                normalizedChars.push(n);
+                positions.push(i);
+            }
+        }
+
+        // Run both tries
+        const blacklistMatches = this.runAutomaton(this.root, text, normalizedChars, positions);
+        const whitelistMatches = this.runAutomaton(this.whiteRoot, text, normalizedChars, positions);
+
+        if (whitelistMatches.length === 0) {
+            return blacklistMatches;
+        }
+
+        return blacklistMatches.filter(b => {
+            return !whitelistMatches.some(w => b.start >= w.start && b.end <= w.end);
+        });
     }
 
     contains(text: string): boolean {
@@ -121,12 +122,13 @@ export class ProfanityFilter {
         if (matches.length === 0) return text;
 
         const arr = text.split("");
+        const maskSet = new Set<number>();
 
         for (const { start, end } of matches) {
-            for (let i = start; i <= end; i++) {
-                const ch = arr[i];
-                if (typeof ch === "string" && /\w/.test(ch)) {
+            for (let i = start; i < end; i++) {
+                if (!maskSet.has(i) && /\w/.test(arr[i]!)) {
                     arr[i] = maskChar;
+                    maskSet.add(i);
                 }
             }
         }
