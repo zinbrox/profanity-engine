@@ -15,20 +15,15 @@
     "dist"
   ],
   "scripts": {
-    "dev": "node --loader ts-node/esm src/sample.ts",
     "build": "tsup",
     "test": "jest --runInBand"
   },
-  "dependencies": {
-    "express": "^5.1.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.5",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.3",
-    "ts-node": "^10.9.1"
+    "typescript": "^5.9.3"
   }
 }
