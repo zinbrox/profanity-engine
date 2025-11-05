@@ -177,4 +177,4 @@ Contributions are welcome! Please open an issue or submit a pull request.
 
 ## Support
 
-For issues, questions, or feature requests, please open an issue on GitH
+For issues, questions, or feature requests, please open an issue on GitHub.

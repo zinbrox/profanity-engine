@@ -1,22 +1,27 @@
 {
-  "name": "@zinbrox/profanity-engine",
-  "version": "1.0.0",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "name": "profanity-engine",
+  "version": "1.0.1",
+  "description": "Profanity Filter using Aho-Corasick algorithm",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/esm/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "files": [
     "dist"
   ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "prepublishOnly": "npm run build && npm test"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
@@ -25,7 +30,6 @@
     "tsup": "^8.5.0",
     "typescript": "^5.9.3"
   },
-  "description": "Profanity Filter using Aho-Corasick algorithm",
   "directories": {
     "test": "tests"
   },
@@ -37,7 +41,7 @@
     "profanity"
   ],
   "author": "zinbrox",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/zinbrox/profanity-engine/issues"
   },
