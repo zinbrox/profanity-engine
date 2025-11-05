@@ -1,5 +1,5 @@
 import { Node } from "./node";
-import { normalizeChar, squashRepeats } from "./normalize";
+import { normalizeChar } from "./normalize";
 import type { Match, ProfanityOptions } from "./types";
 
 export class ProfanityFilter {
@@ -66,7 +66,7 @@ export class ProfanityFilter {
         }
     }
 
-    private runAutomaton(root: Node, text: string, normalizedChars: string[], positions: number[]): Match[] {
+    private runAutomaton(root: Node, normalizedChars: string[], positions: number[]): Match[] {
         const matches: Match[] = [];
         let node: Node = root;
 
@@ -115,9 +115,8 @@ export class ProfanityFilter {
             if (!n) continue;
 
             if (n === prevNorm) {
-                runLen += 1;
-                // Skip if more than 2 repeats
-                if (runLen > 2) continue;
+                runLen++;
+                if (runLen > 2) continue; // only allow up to 2 repeats
             } else {
                 prevNorm = n;
                 runLen = 1;
@@ -127,7 +126,7 @@ export class ProfanityFilter {
             positions.push(i);
         }
 
-        let blacklistMatches = this.runAutomaton(this.root, text, normalizedChars, positions);
+        let blacklistMatches = this.runAutomaton(this.root, normalizedChars, positions);
         if (this.options.logProfanity) {
             console.log("[ProfanityFilter] Blacklist matches:", blacklistMatches);
         }
@@ -143,7 +142,7 @@ export class ProfanityFilter {
             return blacklistMatches;
         }
 
-        const whitelistMatches = this.runAutomaton(this.whiteRoot, text, normalizedChars, positions);
+        const whitelistMatches = this.runAutomaton(this.whiteRoot, normalizedChars, positions);
         if (whitelistMatches.length === 0) {
             return blacklistMatches;
         }
