@@ -1,13 +1,17 @@
 import { Node } from "./node";
 import { normalizeChar, squashRepeats } from "./normalize";
-import type { Match } from "./types";
+import type { Match, ProfanityOptions } from "./types";
 
 export class ProfanityFilter {
     private readonly root: Node = new Node();
     private readonly whiteRoot: Node = new Node();
     private readonly hasWhitelist: boolean;
+    private options: ProfanityOptions;
 
-    constructor(words: string[], whitelist: string[] = []) {
+    constructor(words: string[], whitelist: string[] = [], options: ProfanityOptions = {}) {
+        this.options = {
+            ...options,
+        }
         this.hasWhitelist = whitelist.length > 0;
 
         this.buildTrie(this.root, words.map(w => w.toLowerCase()));
@@ -98,9 +102,6 @@ export class ProfanityFilter {
     }
 
     find(text: string): Match[] {
-        // Build normalized sequence while preserving original indices.
-        // We also implement repeat-squash (3+ identical normalized chars -> at most 2)
-        // on-the-fly to avoid shifting indices.
         const normalizedChars: string[] = [];
         const positions: number[] = [];
 
@@ -126,7 +127,18 @@ export class ProfanityFilter {
             positions.push(i);
         }
 
-        const blacklistMatches = this.runAutomaton(this.root, text, normalizedChars, positions);
+        let blacklistMatches = this.runAutomaton(this.root, text, normalizedChars, positions);
+        if (this.options.logProfanity) {
+            console.log("[ProfanityFilter] Blacklist matches:", blacklistMatches);
+        }
+        if (this.options.wordBoundary) {
+            blacklistMatches = blacklistMatches.filter(m => {
+                const before = text[m.start - 1];
+                const after = text[m.end];
+                const isBoundary = (c: string | undefined) => !c || /\W/.test(c);
+                return isBoundary(before) && isBoundary(after);
+            });
+        }
         if (!this.hasWhitelist || blacklistMatches.length === 0) {
             return blacklistMatches;
         }
@@ -136,12 +148,16 @@ export class ProfanityFilter {
             return blacklistMatches;
         }
 
+        if (this.options.logProfanity) {
+            console.log("[ProfanityFilter] Whitelist matches:", whitelistMatches);
+        }
+
         return blacklistMatches.filter(b => {
             return !whitelistMatches.some(w => b.start >= w.start && b.end <= w.end);
         });
     }
 
-    contains(text: string): boolean {
+    isProfane(text: string): boolean {
         return this.find(text).length > 0;
     }
 

@@ -5,7 +5,7 @@ describe("Edge cases - empty and trivial", () => {
     test("empty blacklist yields no matches", () => {
         const f = new ProfanityFilter([]);
         expect(f.find("anything")).toHaveLength(0);
-        expect(f.contains("anything")).toBe(false);
+        expect(f.isProfane("anything")).toBe(false);
     });
 
     test("empty text yields no matches", () => {
@@ -34,7 +34,7 @@ describe("Ignored chars & unicode/leet mixing", () => {
     test("ignores separators while still detecting", () => {
         const f = new ProfanityFilter(["stupid"]);
         const text = "s t u p i d"; // spaces should be ignored entirely
-        expect(f.contains(text)).toBe(true);
+        expect(f.isProfane(text)).toBe(true);
     });
 
     test("unicode homoglyphs and leet combinations are normalized", () => {

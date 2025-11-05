@@ -9,7 +9,7 @@ describe("ProfanityFilter - normalization & detection", () => {
         const m = f.find(text);
         expect(m.map(x => x.word).sort()).toEqual(["bad", "evil"].sort());
         // check contains
-        expect(f.contains(text)).toBe(true);
+        expect(f.isProfane(text)).toBe(true);
         // positions sanity
         const bad = m.find(x => x.word === "bad")!;
         expect(text.slice(bad.start, bad.end)).toBe("bad");
@@ -22,7 +22,7 @@ describe("ProfanityFilter - normalization & detection", () => {
         const text = "s7up!d and $tup!d and stupid"; // normalization maps 7->t, !->i, $->s
         const m = f.find(text);
         expect(m.length).toBeGreaterThanOrEqual(1);
-        expect(f.contains(text)).toBe(true);
+        expect(f.isProfane(text)).toBe(true);
     });
 
     test("squashes repeats (3+ => 2) during detection", () => {

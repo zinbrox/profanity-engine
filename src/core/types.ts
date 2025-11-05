@@ -6,3 +6,8 @@ export interface Match {
     /** The end index of the original text */
     end: number;
 }
+
+export interface ProfanityOptions {
+    wordBoundary?: boolean;
+    logProfanity?: boolean;
+}

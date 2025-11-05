@@ -16,7 +16,7 @@ app.post("/check", (req: Request, res: Response) => {
         return res.status(400).json({ error: "text is required" });
     }
 
-    const hasProfanity = filter.contains(text);
+    const hasProfanity = filter.isProfane(text);
     const matches = filter.find(text);
     const censored = filter.censor(text);
 
