@@ -1,4 +1,7 @@
-// Unicode homoglyphs
+/**
+ * Maps Unicode homoglyphs and lookalike characters to their ASCII equivalents.
+ * Used to normalize text and prevent profanity filter evasion through character substitution.
+ */
 export const unicodeMap: Record<string, string> = {
     // A
     'à': 'a', 'á': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'å': 'a', 'ā': 'a', 'ă': 'a', 'ą': 'a',
@@ -60,6 +63,10 @@ export const unicodeMap: Record<string, string> = {
     'ź': 'z', 'ż': 'z', 'ž': 'z', 'ᴢ': 'z', 'Ⓩ': 'z', 'Ｚ': 'z'
 };
 
+/**
+ * Maps Unicode digit lookalikes to their ASCII equivalents.
+ * Used to normalize numeric characters that might be used to evade filtering.
+ */
 export const unicodeDigits: Record<string, string> = {
     '⓪': '0', '０': '0',
     '①': '1', '１': '1', '¹': '1', '₁': '1',
@@ -73,7 +80,10 @@ export const unicodeDigits: Record<string, string> = {
     '⑨': '9', '９': '9'
 };
 
-// Characters to ignore (spaces, punctuation separators)
+/**
+ * Set of characters to ignore during normalization (spaces, punctuation, separators).
+ * These characters are removed from text during processing to handle obfuscation attempts.
+ */
 export const ignoreChars = new Set([
     ' ', '\t', '\n',
     '.', ',', '-', '_', '~', '`',
@@ -82,6 +92,11 @@ export const ignoreChars = new Set([
     '\'', '"', ':', ';', '!', '?'
 ]);
 
+/**
+ * Checks if a character is an alphanumeric ASCII character (0-9, a-z).
+ * @param c - The character to check
+ * @returns True if the character is alphanumeric, false otherwise
+ */
 const isAlphaNum = (c: string): boolean => {
     const code = c.charCodeAt(0);
     // 0–9
@@ -91,6 +106,12 @@ const isAlphaNum = (c: string): boolean => {
     return false;
 };
 
+/**
+ * Normalizes a single character by converting Unicode lookalikes to ASCII equivalents.
+ * Removes noise characters and filters out emoji and other non-alphanumeric content.
+ * @param ch - The character to normalize
+ * @returns The normalized ASCII character, or null if the character should be ignored
+ */
 export function normalizeChar(ch: string): string | null {
     const lower = ch.toLowerCase();
 
@@ -108,6 +129,12 @@ export function normalizeChar(ch: string): string | null {
     return null;
 }
 
+/**
+ * Reduces consecutive repeated characters to a maximum of two repetitions.
+ * Example: "heeeeello" becomes "heello"
+ * @param text - The text to process
+ * @returns The text with excessive character repetitions removed
+ */
 export function squashRepeats(text: string): string {
     return text.replace(/(.)\1{2,}/gi, "$1$1");
 }

@@ -3,11 +3,21 @@ import { normalizeChar } from "./normalize";
 import type { Match, ProfanityOptions } from "./types";
 
 export class ProfanityFilter {
+    /** The root node of the trie for profane words */
     private readonly root: Node = new Node();
+    /** The root node of the trie for whitelisted words. Only used if whitelist is provided */
     private readonly whiteRoot: Node = new Node();
+    /** Indicates if a whitelist is active */
     private readonly hasWhitelist: boolean;
+    /** Configuration options for the filter */
     private options: ProfanityOptions;
 
+    /**
+     * Create a new ProfanityFilter instance.
+     * @param words - List of blacklist words to detect.
+     * @param whitelist - List of words that should override blacklist matches.
+     * @param options - Configuration options for the filter
+     */
     constructor(words: string[], whitelist: string[] = [], options: ProfanityOptions = {}) {
         this.options = {
             ...options,
@@ -25,20 +35,33 @@ export class ProfanityFilter {
         }
     }
 
+    /**
+     * Builds a trie data structure from the given words.
+     * Each word is inserted character by character, creating nodes as needed.
+     * @param root - The root node of the trie
+     * @param words - Array of words to insert into the trie
+     * @private
+     */
     private buildTrie(root: Node, words: string[]) {
         for (const word of words) {
             let node = root;
-            const w = word.toLowerCase();
 
-            for (const ch of w) {
-                node = node.children[ch] ??= new Node();
+            for (let ch of word) {
+                const normalizedChar = normalizeChar(ch);
+                if (!normalizedChar) continue;
+                node = node.children[normalizedChar] ??= new Node();
             }
-            if (!node.output.includes(w)) {
-                node.output.push(w);
+            if (!node.output.includes(word)) {
+                node.output.push(word);
             }
         }
     }
 
+    /**
+     * Builds failure links for the Aho-Corasick automaton using BFS.
+     * Failure links allow efficient backtracking when no matching character is found.
+     * @param root - Trie root to process.
+     */
     private buildFailureLinks(root: Node) {
         const queue: Node[] = [];
 
@@ -66,6 +89,14 @@ export class ProfanityFilter {
         }
     }
 
+    /**
+     * Runs the Aho-Corasick automaton on normalized text to find pattern matches.
+     * @param root - The root node of the trie (blacklist or whitelist)
+     * @param normalizedChars - Array of normalized characters
+     * @param positions - Array mapping normalized character indices to original text positions
+     * @returns Array of matches found in the text
+     * @private
+     */
     private runAutomaton(root: Node, normalizedChars: string[], positions: number[]): Match[] {
         const matches: Match[] = [];
         let node: Node = root;
@@ -74,6 +105,7 @@ export class ProfanityFilter {
             const ch = normalizedChars[i]!;
             let cursor: Node | null = node;
 
+            // logic: go back to the longest suffix that is still a prefix in the trie if no edge
             while (cursor && !cursor.children[ch]) {
                 cursor = cursor.fail;
             }
@@ -101,6 +133,12 @@ export class ProfanityFilter {
         return matches;
     }
 
+    /**
+     * Finds all profane word matches in the given text.
+     * Normalizes characters, removes excessive repetitions, and filters based on whitelist and word boundaries.
+     * @param text - The text to scan for profanity
+     * @returns Array of Match objects containing detected profane words and their positions
+     */
     find(text: string): Match[] {
         const normalizedChars: string[] = [];
         const positions: number[] = [];
@@ -108,6 +146,7 @@ export class ProfanityFilter {
         let prevNorm: string | null = null;
         let runLen = 0;
 
+        // Remove duplicates, normalize individual chars & track positions
         for (let i = 0; i < text.length; i++) {
             const ch = text[i];
             if (typeof ch !== "string") continue;
@@ -131,6 +170,7 @@ export class ProfanityFilter {
             console.log("[ProfanityFilter] Blacklist matches:", blacklistMatches);
         }
         if (this.options.wordBoundary) {
+            // only get those words that are on word boundaries
             blacklistMatches = blacklistMatches.filter(m => {
                 const before = text[m.start - 1];
                 const after = text[m.end];
@@ -156,10 +196,21 @@ export class ProfanityFilter {
         });
     }
 
+    /**
+     * Checks if the given text contains any profane words.
+     * @param text - The text to check
+     * @returns True if profanity is detected, false otherwise
+     */
     isProfane(text: string): boolean {
         return this.find(text).length > 0;
     }
 
+    /**
+     * Censors profane words in the text by replacing alphabetic characters with a mask character.
+     * @param text - The text to censor
+     * @param maskChar - The character to use for censoring (default: "*")
+     * @returns The censored text with profane words masked
+     */
     censor(text: string, maskChar = "*"): string {
         const matches = this.find(text);
         if (matches.length === 0) return text;
