@@ -1,6 +1,6 @@
 {
   "name": "profanity-engine",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Profanity Filter using Aho-Corasick algorithm",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -8,7 +8,8 @@
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "files": [
