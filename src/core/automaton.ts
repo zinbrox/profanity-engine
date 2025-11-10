@@ -49,8 +49,8 @@ export class ProfanityFilter {
                 .filter(Boolean)
                 .join('');
 
-            // remove spaces
-            const word = normalized.replace(/\s+/g, '');
+            // remove spaces & apply repeat-squash (same as input)
+            const word = squashRepeats(normalized.replace(/\s+/g, ''));
 
             let node = root;
             for (let ch of word) {
@@ -178,27 +178,28 @@ export class ProfanityFilter {
             console.log("[ProfanityFilter] Blacklist matches:", blacklistMatches);
         }
         if (this.options.wordBoundary) {
-            // only get those words that are on word boundaries
             blacklistMatches = blacklistMatches.filter(m => {
+                // Boundary check. If not at a boundary and allowCompound is false, drop it.
                 if (!isWordBoundary(text, m.start - 1) || !isWordBoundary(text, m.end)) {
-                    return false;
+                    if (!this.options.allowCompound) return false;
                 }
 
-                // verify the extracted substring truly matches the blacklist word
+                // Verify the slice == trie word after identical normalization
                 const extracted = text.slice(m.start, m.end).toLowerCase();
 
-                // normalize extracted similarly to how trie words are stored
-                const normalizedExtracted = Array.from(extracted)
-                    .map(ch => normalizeChar(ch))
-                    .filter(Boolean)
-                    .join('');
+                const normalizedExtracted = squashRepeats(
+                    Array.from(extracted)
+                        .map(ch => normalizeChar(ch))
+                        .filter(Boolean)
+                        .join('')
+                );
 
-                // since blacklist words in trie were stored without spaces and normalized
-                const targetWord = m.word.replace(/\s+/g, '');
+                const targetWord = squashRepeats(m.word.replace(/\s+/g, ''));
 
                 return normalizedExtracted === targetWord;
             });
         }
+
         if (!this.hasWhitelist || blacklistMatches.length === 0) {
             return blacklistMatches;
         }

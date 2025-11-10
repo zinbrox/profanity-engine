@@ -89,7 +89,25 @@ export const ignoreChars = new Set([
     '.', ',', '-', '_', '~', '`',
     '/', '\\', '|', '*', '+', '=',
     '(', ')', '[', ']', '{', '}',
-    '\'', '"', ':', ';', '!', '?'
+    '\'', '"', ':', ';', '!', '?',
+
+    // Common Unicode spaces/separators
+    '\u00A0', // NO-BREAK SPACE
+    '\u1680', // OGHAM SPACE MARK
+    '\u180E', // MONGOLIAN VOWEL SEPARATOR
+    '\u2000', '\u2001', '\u2002', '\u2003', '\u2004',
+    '\u2005', '\u2006', '\u2007', '\u2008', '\u2009', '\u200A', // EN/EM/etc spaces
+    '\u200B', // ZERO WIDTH SPACE
+    '\u200C', // ZERO WIDTH NON-JOINER
+    '\u200D', // ZERO WIDTH JOINER
+    '\u202F', // NARROW NO-BREAK SPACE
+    '\u205F', // MEDIUM MATHEMATICAL SPACE
+    '\u2060', // WORD JOINER
+    '\u3000', // IDEOGRAPHIC SPACE
+    '\uFEFF', // ZERO WIDTH NO-BREAK SPACE
+
+    // Dashes/points often used as obfuscation
+    '–', '—', '·', '•', '‧', '∙'
 ]);
 
 
@@ -147,5 +165,10 @@ export function isWordBoundary(text: string, index: number): boolean {
     if (!char) return true;
 
     const n = normalizeChar(char);
-    return !n || !/[a-z0-9]/i.test(n);
+
+    // If the original character was dropped (emoji, punctuation, space, symbol)
+    // treat it as a word boundary
+    if (!n) return true;
+
+    return !/[a-z0-9]/i.test(n);
 }

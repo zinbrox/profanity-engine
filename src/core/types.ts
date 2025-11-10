@@ -10,4 +10,5 @@ export interface Match {
 export interface ProfanityOptions {
     wordBoundary?: boolean;
     logProfanity?: boolean;
+    allowCompound?: boolean;
 }
