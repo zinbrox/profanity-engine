@@ -50,7 +50,7 @@ export class ProfanityFilter {
                 .join('');
 
             // remove spaces & apply repeat-squash (same as input)
-            const word = squashRepeats(normalized.replace(/\s+/g, ''));
+            const word = normalized.replace(/\s+/g, '');
 
             let node = root;
             for (let ch of word) {
@@ -146,8 +146,6 @@ export class ProfanityFilter {
      * @returns Array of Match objects containing detected profane words and their positions
      */
     find(text: string): Match[] {
-        text = squashRepeats(text);
-
         const normalizedChars: string[] = [];
         const positions: number[] = [];
 
@@ -160,14 +158,6 @@ export class ProfanityFilter {
             if (typeof ch !== "string") continue;
             const n = normalizeChar(ch);
             if (!n) continue;
-
-            if (n === prevNorm) {
-                runLen++;
-                if (runLen > 2) continue; // only allow up to 2 repeats
-            } else {
-                prevNorm = n;
-                runLen = 1;
-            }
 
             normalizedChars.push(n);
             positions.push(i);
