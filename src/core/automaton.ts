@@ -1,5 +1,5 @@
 import { Node } from "./node";
-import { normalizeChar } from "./normalize";
+import { normalizeChar, squashRepeats, isWordBoundary } from "./normalize";
 import type { Match, ProfanityOptions } from "./types";
 
 export class ProfanityFilter {
@@ -43,14 +43,20 @@ export class ProfanityFilter {
      * @private
      */
     private buildTrie(root: Node, words: string[]) {
-        for (const word of words) {
-            let node = root;
+        for (const raw of words) {
+            const normalized = Array.from(raw)
+                .map(ch => normalizeChar(ch))
+                .filter(Boolean)
+                .join('');
 
+            // remove spaces
+            const word = normalized.replace(/\s+/g, '');
+
+            let node = root;
             for (let ch of word) {
-                const normalizedChar = normalizeChar(ch);
-                if (!normalizedChar) continue;
-                node = node.children[normalizedChar] ??= new Node();
+                node = node.children[ch] ??= new Node();
             }
+
             if (!node.output.includes(word)) {
                 node.output.push(word);
             }
@@ -140,6 +146,8 @@ export class ProfanityFilter {
      * @returns Array of Match objects containing detected profane words and their positions
      */
     find(text: string): Match[] {
+        text = squashRepeats(text);
+
         const normalizedChars: string[] = [];
         const positions: number[] = [];
 
@@ -172,10 +180,23 @@ export class ProfanityFilter {
         if (this.options.wordBoundary) {
             // only get those words that are on word boundaries
             blacklistMatches = blacklistMatches.filter(m => {
-                const before = text[m.start - 1];
-                const after = text[m.end];
-                const isBoundary = (c: string | undefined) => !c || /\W/.test(c);
-                return isBoundary(before) && isBoundary(after);
+                if (!isWordBoundary(text, m.start - 1) || !isWordBoundary(text, m.end)) {
+                    return false;
+                }
+
+                // verify the extracted substring truly matches the blacklist word
+                const extracted = text.slice(m.start, m.end).toLowerCase();
+
+                // normalize extracted similarly to how trie words are stored
+                const normalizedExtracted = Array.from(extracted)
+                    .map(ch => normalizeChar(ch))
+                    .filter(Boolean)
+                    .join('');
+
+                // since blacklist words in trie were stored without spaces and normalized
+                const targetWord = m.word.replace(/\s+/g, '');
+
+                return normalizedExtracted === targetWord;
             });
         }
         if (!this.hasWhitelist || blacklistMatches.length === 0) {

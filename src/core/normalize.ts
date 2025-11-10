@@ -92,6 +92,7 @@ export const ignoreChars = new Set([
     '\'', '"', ':', ';', '!', '?'
 ]);
 
+
 /**
  * Checks if a character is an alphanumeric ASCII character (0-9, a-z).
  * @param c - The character to check
@@ -113,7 +114,7 @@ const isAlphaNum = (c: string): boolean => {
  * @returns The normalized ASCII character, or null if the character should be ignored
  */
 export function normalizeChar(ch: string): string | null {
-    const lower = ch.toLowerCase();
+    let lower = ch.toLowerCase();
 
     // Homoglyph letter map
     if (unicodeMap[lower]) return unicodeMap[lower];
@@ -137,4 +138,14 @@ export function normalizeChar(ch: string): string | null {
  */
 export function squashRepeats(text: string): string {
     return text.replace(/(.)\1{2,}/gi, "$1$1");
+}
+
+export function isWordBoundary(text: string, index: number): boolean {
+    if (index < 0 || index >= text.length) return true;
+
+    const char = text[index];
+    if (!char) return true;
+
+    const n = normalizeChar(char);
+    return !n || !/[a-z0-9]/i.test(n);
 }
